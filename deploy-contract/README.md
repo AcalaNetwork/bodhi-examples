@@ -9,7 +9,7 @@ This is a basic example that demonstrates how to sign EVM+ transactions with a p
 ## Core Flow
 There are 4 steps 
 
-step 1: we first need to connect a bodhi signer provider to chain node
+**step 1**: we first need to connect a bodhi signer provider to chain node
 ```tsx
 import { Provider, Signer } from '@acala-network/bodhi';
 
@@ -21,7 +21,7 @@ const signerProvider = new Provider({
 await signerProvider.isReady();
 ```
 
-step 2: then we need to connect polkadot wallet extension
+**step 2**: then we need to connect polkadot wallet extension
 ```tsx
 const allExtensions = await web3Enable('bodhijs-example');
 const curExtension = allExtensions[0];
@@ -40,7 +40,7 @@ const [evmAddress, accountBalance] = await Promise.all([
 ]);
 ```
 
-step 3: deploy [echo contract](https://github.com/AcalaNetwork/hardhat-tutorials/blob/master/echo/README.md) using the signer we just created
+**step 3**: deploy [echo contract](https://github.com/AcalaNetwork/hardhat-tutorials/blob/master/echo/README.md) using the signer we just created
 ```tsx
 import { ContractFactory } from 'ethers';
 
@@ -50,7 +50,7 @@ const contract = await factory.deploy();
 const echo = await contract.echo();         // check the initial echo msg
 ```
 
-step 4: call the contract we just deployed
+**step 4**: call the contract we just deployed
 ```tsx
 import { Contract } from 'ethers';
 
