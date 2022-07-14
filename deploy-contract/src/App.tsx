@@ -1,4 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+  useCallback, useEffect, useMemo, useState,
+} from 'react';
 import { Provider, Signer } from '@acala-network/bodhi';
 import { WsProvider } from '@polkadot/api';
 import { web3Enable } from '@polkadot/extension-dapp';
@@ -10,9 +12,9 @@ import { ContractFactory, Contract } from 'ethers';
 import { Input, Button, Select } from 'antd';
 import echoContract from './Echo.json';
 
-const { Option } = Select;
-
 import './App.scss';
+
+const { Option } = Select;
 
 const Check = () => (<span className='check'>✓</span>);
 
@@ -20,9 +22,7 @@ function App() {
   /* ---------- extensions ---------- */
   const [extensionList, setExtensionList] = useState<InjectedExtension[]>([]);
   const [curExtension, setCurExtension] = useState<InjectedExtension | undefined>(undefined);
-  const [accountList, setAccountList] = useState<InjectedAccount[] | null>(
-    null
-  );
+  const [accountList, setAccountList] = useState<InjectedAccount[]>([]);
 
   /* ---------- status flags ---------- */
   const [connecting, setConnecting] = useState(false);
@@ -36,23 +36,23 @@ function App() {
   const [claimedEvmAddress, setClaimedEvmAddress] = useState<string>('');
   const [balance, setBalance] = useState<string>('');
   const [deployedAddress, setDeployedAddress] = useState<string>('');
-  const [echoInput, setEchoInput] = useState<string>('I just called an EVM+ contract with polkadot wallet!');
+  const [echoInput, setEchoInput] = useState<string>('calling an EVM+ contract with polkadot wallet!');
   const [echoMsg, setEchoMsg] = useState<string>('');
   const [newEchoMsg, setNewEchoMsg] = useState<string>('');
   const [url, setUrl] = useState<string>('wss://acala-mandala.api.onfinality.io/public-ws');
   // const [url, setUrl] = useState<string>('ws://localhost:9944');
 
   /* ------------ Step 1: connect to chain node with a provider ------------ */
-  const connectProvider = useCallback(async (url: string) => {
+  const connectProvider = useCallback(async (nodeUrl: string) => {
     setConnecting(true);
     try {
-      const provider = new Provider({
-        provider: new WsProvider(url.trim()),
+      const signerProvider = new Provider({
+        provider: new WsProvider(nodeUrl.trim()),
       });
 
-      await provider.isReady();
+      await signerProvider.isReady();
 
-      setProvider(provider);
+      setProvider(signerProvider);
     } catch (error) {
       console.error(error);
       setProvider(null);
@@ -63,13 +63,13 @@ function App() {
 
   /* ------------ Step 2: connect polkadot wallet ------------ */
   const connectWallet = useCallback(async () => {
-    const extensionList = await web3Enable('bodhijs-example');
-    setExtensionList(extensionList);
-    setCurExtension(extensionList[0]);
+    const allExtensions = await web3Enable('bodhijs-example');
+    setExtensionList(allExtensions);
+    setCurExtension(allExtensions[0]);
   }, []);
 
   useEffect(() => {
-    curExtension?.accounts.get().then((result) => {
+    curExtension?.accounts.get().then(result => {
       setAccountList(result);
       setSelectedAddress(result[0].address || '');
     });
@@ -90,16 +90,16 @@ function App() {
      - whatever needed
                                                ---------- */
   useEffect(() => {
-    (async function fetchAccountInfo () {
+    (async function fetchAccountInfo() {
       if (!signer) return;
 
       setLoadingAccountInfo(true);
       try {
-        const [evmAddress, balance] = await Promise.all([
+        const [evmAddress, accountBalance] = await Promise.all([
           signer.queryEvmAddress(),
           signer.getBalance(),
         ]);
-        setBalance(balance.toString());
+        setBalance(accountBalance.toString());
         setClaimedEvmAddress(evmAddress);
       } catch (error) {
         console.error(error);
@@ -108,7 +108,7 @@ function App() {
       } finally {
         setLoadingAccountInfo(false);
       }
-    })();
+    }());
   }, [signer]);
 
   /* ------------ Step 3: deploy contract ------------ */
@@ -146,16 +146,17 @@ function App() {
     }
   }, [signer, deployedAddress]);
 
+  // eslint-disable-next-line
   const ExtensionSelect = () => (
     <div>
       <span style={{ marginRight: 10 }}>select a polkadot wallet:</span>
       <Select
-        value={curExtension?.name}
-        onChange={(targetName) => setCurExtension(extensionList.find(e => e.name === targetName))}
-        disabled={deployedAddress}
+        value={ curExtension?.name }
+        onChange={ targetName => setCurExtension(extensionList.find(e => e.name === targetName)) }
+        disabled={ !!deployedAddress }
       >
-        {extensionList.map((ex) => (
-          <Option key={ex.name} value={ex.name}>
+        {extensionList.map(ex => (
+          <Option key={ ex.name } value={ ex.name }>
             {`${ex.name}/${ex.version}`}
           </Option>
         ))}
@@ -163,16 +164,17 @@ function App() {
     </div>
   );
 
+  // eslint-disable-next-line
   const AccountSelect = () => (
     <div>
       <span style={{ marginRight: 10 }}>account:</span>
       <Select
-        value={selectedAddress}
-        onChange={(value) => setSelectedAddress(value)}
-        disabled={deployedAddress}
+        value={ selectedAddress }
+        onChange={ value => setSelectedAddress(value) }
+        disabled={ !!deployedAddress }
       >
-        {accountList.map((account) => (
-          <Option key={account.address} value={account.address}>
+        {accountList.map(account => (
+          <Option key={ account.address } value={ account.address }>
             {account.name} / {account.address}
           </Option>
         ))}
@@ -187,21 +189,21 @@ function App() {
         <div className='step-text'>Step 1: Connect Chain Node { provider && <Check /> }</div>
         <Input
           type='text'
-          disabled={connecting || provider}
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
+          disabled={ connecting || !!provider }
+          value={ url }
+          onChange={ e => setUrl(e.target.value) }
           addonBefore='node url'
         />
         <Button
           type='primary'
-          onClick={() => connectProvider(url)}
-          disabled={connecting || provider}
+          onClick={ () => connectProvider(url) }
+          disabled={ connecting || !!provider }
         >
           { connecting
-          ? 'connecting ...'
-          : provider
-            ? `connected to ${provider.api.runtimeChain.toString()}`
-            : 'connect'}
+            ? 'connecting ...'
+            : provider
+              ? `connected to ${provider.api.runtimeChain.toString()}`
+              : 'connect' }
         </Button>
       </section>
 
@@ -211,8 +213,8 @@ function App() {
         <div>
           <Button
             type='primary'
-            onClick={connectWallet}
-            disabled={!provider || signer}
+            onClick={ connectWallet }
+            disabled={ !provider || !!signer }
           >
             {curExtension
               ? `connected to ${curExtension.name}/${curExtension.version}`
@@ -229,8 +231,7 @@ function App() {
               ? 'loading account info ...'
               : claimedEvmAddress
                 ? (<div>claimed evm address: <span className='address'>{claimedEvmAddress}</span></div>)
-                : (<div>default evm address: <span className='address'>{signer.computeDefaultEvmAddress()}</span></div>)
-            }
+                : (<div>default evm address: <span className='address'>{signer.computeDefaultEvmAddress()}</span></div>)}
             { balance && (<div>account balance: <span className='address'>{ balance }</span></div>) }
           </div>
         )}
@@ -241,20 +242,22 @@ function App() {
         <div className='step-text'>Step 3: Deploy Echo Contract { deployedAddress && <Check /> }</div>
         <Button
           type='primary'
-          disabled={!signer || deploying || deployedAddress}
-          onClick={deploy}
+          disabled={ !signer || deploying || !!deployedAddress }
+          onClick={ deploy }
         >
           { deployedAddress
-              ? 'contract deployed'
-              : deploying
-                ? 'deploying ...'
-                : 'deploy'}
+            ? 'contract deployed'
+            : deploying
+              ? 'deploying ...'
+              : 'deploy'}
         </Button>
 
-        {deployedAddress && (<>
-          <div>contract address: <span className='address'>{deployedAddress}</span></div>
-          <div>initial echo messge: <span className='address'>{echoMsg}</span></div>
-        </>)}
+        {deployedAddress && (
+          <>
+            <div>contract address: <span className='address'>{deployedAddress}</span></div>
+            <div>initial echo messge: <span className='address'>{echoMsg}</span></div>
+          </>
+        )}
       </section>
 
       { /* ------------------------------ Step 4 ------------------------------*/}
@@ -262,19 +265,19 @@ function App() {
         <div className='step-text'>Step 4: Call Contract To Change Echo Msg { newEchoMsg && <Check /> }</div>
         <Input
           type='text'
-          disabled={!signer || !deployedAddress || calling}
-          value={echoInput}
-          onChange={(e) => setEchoInput(e.target.value)}
+          disabled={ !signer || !deployedAddress || calling }
+          value={ echoInput }
+          onChange={ e => setEchoInput(e.target.value) }
           addonBefore='new msg'
         />
         <Button
           type='primary'
-          disabled={!signer || !deployedAddress || calling}
-          onClick={() => callContract(echoInput)}
+          disabled={ !signer || !deployedAddress || calling }
+          onClick={ () => callContract(echoInput) }
         >
           { calling
-              ? 'sending tx ...'
-              : 'call'}
+            ? 'sending tx ...'
+            : 'call'}
         </Button>
 
         {newEchoMsg && (
@@ -289,7 +292,7 @@ function App() {
           <Button
             id='next-level'
             type='primary'
-            onClick={() => window.open('https://github.com/AcalaNetwork/bodhi-examples/dex', '_blank')}
+            onClick={ () => window.open('https://github.com/AcalaNetwork/bodhi-examples/dex', '_blank') }
           >
             Take Me To Advanced Example (Coming Soon)
           </Button>
