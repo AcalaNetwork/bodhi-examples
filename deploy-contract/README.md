@@ -1,6 +1,8 @@
 # Bodhi.js Example - Contract Interaction
 This is a basic example that demonstrates how to sign EVM+ transactions with a polkadot wallet and [bodhi.js](https://github.com/AcalaNetwork/bodhi.js/).
 
+app: https://bodhi-example-contract.vercel.app/
+
 ## Run
 - start a dev server: `yarn dev`
 - build: `yarn build`
