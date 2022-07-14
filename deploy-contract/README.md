@@ -1,5 +1,5 @@
-# EVM+ with Polkadot Wallet Example - Contract Interaction
-This is a basic example that demonstrates how to sign EVM+ transactions with a polkadot wallet.
+# Bodhi.js Example - Contract Interaction
+This is a basic example that demonstrates how to sign EVM+ transactions with a polkadot wallet and [bodhi.js](https://github.com/AcalaNetwork/bodhi.js/).
 
 ## Run
 - start a dev server: `yarn dev`
