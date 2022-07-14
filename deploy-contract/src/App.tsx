@@ -292,7 +292,7 @@ function App() {
           <Button
             id='next-level'
             type='primary'
-            onClick={ () => window.open('https://github.com/AcalaNetwork/bodhi-examples/dex', '_blank') }
+            onClick={ () => window.open('https://github.com/AcalaNetwork/bodhi-examples/tree/master/batch-transactions', '_blank') }
           >
             Take Me To Advanced Example (Coming Soon)
           </Button>
