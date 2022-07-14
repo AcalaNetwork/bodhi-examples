@@ -6,47 +6,44 @@ import type {
   InjectedExtension,
   InjectedAccount,
 } from '@polkadot/extension-inject/types';
-import { ContractFactory } from 'ethers';
+import { ContractFactory, Contract } from 'ethers';
 import { Input, Button, Select } from 'antd';
+import echoContract from './Echo.json';
 
 const { Option } = Select;
 
 import './App.scss';
 
-const BYTE_CODE =
-  '0x608060405234801561001057600080fd5b506040516103bc3803806103bc83398101604081905261002f9161007c565b60405181815233906000907fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef9060200160405180910390a333600090815260208190526040902055610094565b60006020828403121561008d578081fd5b5051919050565b610319806100a36000396000f3fe608060405234801561001057600080fd5b506004361061004c5760003560e01c8063313ce5671461005157806370a082311461006557806395d89b411461009c578063a9059cbb146100c5575b600080fd5b604051601281526020015b60405180910390f35b61008e610073366004610201565b6001600160a01b031660009081526020819052604090205490565b60405190815260200161005c565b604080518082018252600781526626bcaa37b5b2b760c91b6020820152905161005c919061024b565b6100d86100d3366004610222565b6100e8565b604051901515815260200161005c565b3360009081526020819052604081205482111561014b5760405162461bcd60e51b815260206004820152601a60248201527f696e73756666696369656e7420746f6b656e2062616c616e6365000000000000604482015260640160405180910390fd5b336000908152602081905260408120805484929061016a9084906102b6565b90915550506001600160a01b0383166000908152602081905260408120805484929061019790849061029e565b90915550506040518281526001600160a01b0384169033907fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef9060200160405180910390a350600192915050565b80356001600160a01b03811681146101fc57600080fd5b919050565b600060208284031215610212578081fd5b61021b826101e5565b9392505050565b60008060408385031215610234578081fd5b61023d836101e5565b946020939093013593505050565b6000602080835283518082850152825b818110156102775785810183015185820160400152820161025b565b818111156102885783604083870101525b50601f01601f1916929092016040019392505050565b600082198211156102b1576102b16102cd565b500190565b6000828210156102c8576102c86102cd565b500390565b634e487b7160e01b600052601160045260246000fdfea2646970667358221220d80384ce584e101c5b92e4ee9b7871262285070dbcd2d71f99601f0f4fcecd2364736f6c63430008040033';
-
-const ABI = ['constructor(uint totalSupply)'];
-
 const Check = () => (<span className='check'>✓</span>);
 
 function App() {
-  const [extension, setExtension] = useState<InjectedExtension | null>(null);
+  /* ---------- extensions ---------- */
+  const [extensionList, setExtensionList] = useState<InjectedExtension[]>([]);
+  const [curExtension, setCurExtension] = useState<InjectedExtension | undefined>(undefined);
   const [accountList, setAccountList] = useState<InjectedAccount[] | null>(
     null
   );
+
+  /* ---------- status flags ---------- */
   const [connecting, setConnecting] = useState(false);
-  const [loadingEvmAddress, setLoadingEvmAddress] = useState(false);
+  const [loadingAccount, setLoadingAccountInfo] = useState(false);
+  const [deploying, setDeploying] = useState(false);
+  const [calling, setCalling] = useState(false);
+
+  /* ---------- data ---------- */
   const [provider, setProvider] = useState<Provider | null>(null);
   const [selectedAddress, setSelectedAddress] = useState<string>('');
   const [claimedEvmAddress, setClaimedEvmAddress] = useState<string>('');
+  const [balance, setBalance] = useState<string>('');
   const [deployedAddress, setDeployedAddress] = useState<string>('');
-  const [deploying, setDeploying] = useState(false);
+  const [echoInput, setEchoInput] = useState<string>('I just called an EVM+ contract with polkadot wallet!');
+  const [echoMsg, setEchoMsg] = useState<string>('');
+  const [newEchoMsg, setNewEchoMsg] = useState<string>('');
   const [url, setUrl] = useState<string>('wss://acala-mandala.api.onfinality.io/public-ws');
+  // const [url, setUrl] = useState<string>('ws://localhost:9944');
 
-  useEffect(() => {
-    extension?.accounts.get().then((result) => {
-      setAccountList(result);
-      setSelectedAddress(result[0].address || '');
-    });
-  }, [extension]);
-
-  const enable = useCallback(async () => {
-    const extensions = await web3Enable('bodhijs-boilerplate');
-    setExtension(extensions[0]);
-  }, []);
-
-  const connect = useCallback(async (url: string) => {
+  /* ------------ Step 1: connect to chain node with a provider ------------ */
+  const connectProvider = useCallback(async (url: string) => {
     setConnecting(true);
     try {
       const provider = new Provider({
@@ -64,60 +61,140 @@ function App() {
     }
   }, []);
 
-  const signer = useMemo(() => {
-    if (!provider || !extension || !selectedAddress) return null;
-    return new Signer(provider, selectedAddress, extension.signer);
-  }, [provider, extension, selectedAddress]);
+  /* ------------ Step 2: connect polkadot wallet ------------ */
+  const connectWallet = useCallback(async () => {
+    const extensionList = await web3Enable('bodhijs-example');
+    setExtensionList(extensionList);
+    setCurExtension(extensionList[0]);
+  }, []);
 
   useEffect(() => {
-    if (signer) {
-      setLoadingEvmAddress(true);
-      signer
-        .queryEvmAddress()
-        .then((result) => {
-          setClaimedEvmAddress(result);
-        })
-        .catch((error) => {
-          console.error(error);
-          setClaimedEvmAddress('');
-        })
-        .finally(() => {
-          setLoadingEvmAddress(false);
-        });
-    } else {
-      setClaimedEvmAddress('');
-    }
+    curExtension?.accounts.get().then((result) => {
+      setAccountList(result);
+      setSelectedAddress(result[0].address || '');
+    });
+  }, [curExtension]);
+
+  /* ----------
+     Step 2.1: create a bodhi signer from provider and extension signer
+                                                             ---------- */
+  const signer = useMemo(() => {
+    if (!provider || !curExtension || !selectedAddress) return null;
+    return new Signer(provider, selectedAddress, curExtension.signer);
+  }, [provider, curExtension, selectedAddress]);
+
+  /* ----------
+     Step 2.2: locad some info about the account such as:
+     - bound/default evm address
+     - balance
+     - whatever needed
+                                               ---------- */
+  useEffect(() => {
+    (async function fetchAccountInfo () {
+      if (!signer) return;
+
+      setLoadingAccountInfo(true);
+      try {
+        const [evmAddress, balance] = await Promise.all([
+          signer.queryEvmAddress(),
+          signer.getBalance(),
+        ]);
+        setBalance(balance.toString());
+        setClaimedEvmAddress(evmAddress);
+      } catch (error) {
+        console.error(error);
+        setClaimedEvmAddress('');
+        setBalance('');
+      } finally {
+        setLoadingAccountInfo(false);
+      }
+    })();
   }, [signer]);
 
+  /* ------------ Step 3: deploy contract ------------ */
   const deploy = useCallback(async () => {
     if (!signer) return;
-    setDeployedAddress('');
+
     setDeploying(true);
     try {
-      const factory = new ContractFactory(ABI, BYTE_CODE, signer);
+      const factory = new ContractFactory(echoContract.abi, echoContract.bytecode, signer);
 
-      const contract = await factory.deploy(42);
+      const contract = await factory.deploy();
+      const echo = await contract.echo();
 
       setDeployedAddress(contract.address);
+      setEchoMsg(echo);
     } finally {
       setDeploying(false);
     }
   }, [signer]);
 
+  /* ------------ Step 4: call contract ------------ */
+  const callContract = useCallback(async (msg: string) => {
+    if (!signer) return;
+    setCalling(true);
+    setNewEchoMsg('');
+    try {
+      const instance = new Contract(deployedAddress, echoContract.abi, signer);
+
+      await instance.scream(msg);
+      const newEcho = await instance.echo();
+
+      setNewEchoMsg(newEcho);
+    } finally {
+      setCalling(false);
+    }
+  }, [signer, deployedAddress]);
+
+  const ExtensionSelect = () => (
+    <div>
+      <span style={{ marginRight: 10 }}>select a polkadot wallet:</span>
+      <Select
+        value={curExtension?.name}
+        onChange={(targetName) => setCurExtension(extensionList.find(e => e.name === targetName))}
+        disabled={deployedAddress}
+      >
+        {extensionList.map((ex) => (
+          <Option key={ex.name} value={ex.name}>
+            {`${ex.name}/${ex.version}`}
+          </Option>
+        ))}
+      </Select>
+    </div>
+  );
+
+  const AccountSelect = () => (
+    <div>
+      <span style={{ marginRight: 10 }}>account:</span>
+      <Select
+        value={selectedAddress}
+        onChange={(value) => setSelectedAddress(value)}
+        disabled={deployedAddress}
+      >
+        {accountList.map((account) => (
+          <Option key={account.address} value={account.address}>
+            {account.name} / {account.address}
+          </Option>
+        ))}
+      </Select>
+    </div>
+  );
+
   return (
     <div id='app'>
+      { /* ------------------------------ Step 1 ------------------------------*/ }
       <section className='step'>
         <div className='step-text'>Step 1: Connect Chain Node { provider && <Check /> }</div>
         <Input
           type='text'
+          disabled={connecting || provider}
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           addonBefore='node url'
         />
         <Button
           type='primary'
-          disabled={connecting}
-          onClick={() => connect(url)}
+          onClick={() => connectProvider(url)}
           disabled={connecting || provider}
         >
           { connecting
@@ -128,50 +205,40 @@ function App() {
         </Button>
       </section>
 
+      { /* ------------------------------ Step 2 ------------------------------*/}
       <section className='step'>
         <div className='step-text'>Step 2: Connect Polkadot Wallet { signer && <Check />  }</div>
         <div>
           <Button
             type='primary'
-            onClick={enable}
+            onClick={connectWallet}
             disabled={!provider || signer}
           >
-            {extension
-              ? `connected to ${extension.name}/${extension.version}`
+            {curExtension
+              ? `connected to ${curExtension.name}/${curExtension.version}`
               : 'connect'}
           </Button>
 
-          {accountList?.length ? (
-            <div>
-              <span style={{ marginRight: 10 }}>account:</span>
-              <Select
-                value={selectedAddress}
-                onChange={(value) => setSelectedAddress(value)}
-              >
-                {accountList.map((account) => (
-                  <Option key={account.address} value={account.address}>
-                    {account.name} / {account.address}
-                  </Option>
-                ))}
-              </Select>
-            </div>
-          ) : null}
+          { !!extensionList?.length && <ExtensionSelect /> }
+          { !!accountList?.length && <AccountSelect /> }
         </div>
 
         {signer && (
           <div>
-            {loadingEvmAddress
-              ? 'loading evm address ...'
+            {loadingAccount
+              ? 'loading account info ...'
               : claimedEvmAddress
-                ? (<>claimed evm address: <span id='evmAddress'>{claimedEvmAddress}</span></>)
-                : (<>default evm address: <span id='evmAddress'>{signer.computeDefaultEvmAddress()}</span></>)
+                ? (<div>claimed evm address: <span className='address'>{claimedEvmAddress}</span></div>)
+                : (<div>default evm address: <span className='address'>{signer.computeDefaultEvmAddress()}</span></div>)
             }
+            { balance && (<div>account balance: <span className='address'>{ balance }</span></div>) }
           </div>
         )}
       </section>
 
+      { /* ------------------------------ Step 3 ------------------------------*/}
       <section className='step'>
-        <div className='step-text'>Step 3: Deploy Contract { signer && <Check /> }</div>
+        <div className='step-text'>Step 3: Deploy Echo Contract { deployedAddress && <Check /> }</div>
         <Button
           type='primary'
           disabled={!signer || deploying || deployedAddress}
@@ -184,10 +251,50 @@ function App() {
                 : 'deploy'}
         </Button>
 
-        {deployedAddress && (
-          <div>contract address: <span id='evmAddress'>{deployedAddress}</span></div>
+        {deployedAddress && (<>
+          <div>contract address: <span className='address'>{deployedAddress}</span></div>
+          <div>initial echo messge: <span className='address'>{echoMsg}</span></div>
+        </>)}
+      </section>
+
+      { /* ------------------------------ Step 4 ------------------------------*/}
+      <section className='step'>
+        <div className='step-text'>Step 4: Call Contract To Change Echo Msg { newEchoMsg && <Check /> }</div>
+        <Input
+          type='text'
+          disabled={!signer || !deployedAddress || calling}
+          value={echoInput}
+          onChange={(e) => setEchoInput(e.target.value)}
+          addonBefore='new msg'
+        />
+        <Button
+          type='primary'
+          disabled={!signer || !deployedAddress || calling}
+          onClick={() => callContract(echoInput)}
+        >
+          { calling
+              ? 'sending tx ...'
+              : 'call'}
+        </Button>
+
+        {newEchoMsg && (
+          <div>new echo messge: <span className='address'>{newEchoMsg}</span></div>
         )}
       </section>
+
+      {newEchoMsg && (
+        <section className='step' id='congrats'>
+          <div>Congratulations 🎉🎉</div>
+          <div>You have succesfully deployed and called an EVM+ contract with <span className='cross'>metamask</span><span className='decorate'>polkadot wallet</span></div>
+          <Button
+            id='next-level'
+            type='primary'
+            onClick={() => window.open('https://github.com/AcalaNetwork/bodhi-examples/dex', '_blank')}
+          >
+            Take Me To Advanced Example (Coming Soon)
+          </Button>
+        </section>
+      )}
     </div>
   );
 }
