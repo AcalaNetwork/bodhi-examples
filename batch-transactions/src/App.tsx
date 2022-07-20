@@ -10,14 +10,10 @@ import type {
   InjectedExtension,
   InjectedAccount,
 } from '@polkadot/extension-inject/types';
-import { ContractFactory, Contract } from 'ethers';
 import { Input, Button, Select } from 'antd';
-import dexContract from './Dex.json';
 
+import { getDexDeployExtrinsic, getTokenDeployExtrinsic } from './utils';
 import './App.scss';
-import { toBN } from './utils';
-import { ISubmittableResult } from '@polkadot/types/types';
-import { SubmittableExtrinsic } from '@polkadot/api-base/types';
 
 const { Option } = Select;
 
@@ -117,84 +113,39 @@ function App() {
   }, [signer]);
 
   /* ------------ Step 2: deploy contract ------------ */
-  // need to extra some code from signer.sendTransaction
-  const getDexDeployExtrinsic = useCallback(async (signer, provider) => {
-    const [signerAddress, evmAddress] = await Promise.all([
-      signer.getSubstrateAddress(),
-      signer.getAddress(),
-    ]);
-
-    const factory = new ContractFactory(dexContract.abi, dexContract.bytecode, signer);
-
-    const tx = await signer.populateTransaction({
-      ...factory.getDeployTransaction(),
-      from: evmAddress,
-    });
-
-    const {
-      gas: gasLimit,
-      storage: storageLimit,
-    } = await provider.estimateResources(tx);
-
-    const extrinsic = provider.api.tx.evm.create(
-      tx.data,
-      toBN(tx.value),
-      toBN(gasLimit),
-      toBN(storageLimit.isNegative() ? 0 : storageLimit),
-      tx.accessList || []
-    );
-
-    return extrinsic;
-  }, []);
-
+  // need to extract some code from signer.sendTransaction
   const deploy = useCallback(async () => {
     if (!signer || !provider) return;
 
     setDeploying(true);
     try {
-      const extrinsic1 = await getDexDeployExtrinsic(signer, provider);
-      const extrinsic2 = await getDexDeployExtrinsic(signer, provider);
+      const extrinsic1 = await getDexDeployExtrinsic(signer);
+      const extrinsic2 = await getTokenDeployExtrinsic(signer, [1234567890]);
+      const extrinsic3 = await getTokenDeployExtrinsic(signer, [8888888888]);
 
       const extrinsic = await provider.api.tx.utility.batchAll([
         extrinsic1,
         extrinsic2,
+        extrinsic3,
       ]).signAsync(await signer.getSubstrateAddress());
 
-      // const txHash1 = extrinsic1.hash.toHex();
-      // const txHash2 = extrinsic2.hash.toHex();
+      extrinsic.send((result: SubmittableResult) => {
+        if (result.status.isFinalized || result.status.isInBlock) {
+          const [addr1, addr2, addr3] = result.events.filter(
+            ({ event: { section, method } }) => (section === 'evm' && method === 'Created')
+          ).map(({ event }) => event.data[1].toHex());
 
-      const {
-        contractAddr1,
-        contractAddr2,
-      } = await new Promise<{
-        contractAddr1: string,
-        contractAddr2: string,
-      }>((resolve, reject) => {
-        extrinsic.send((result: SubmittableResult) => {
-          if (result.status.isFinalized || result.status.isInBlock) {
-            const [contractAddr1, contractAddr2] = result.events.filter(({ event: { section, method } }) => {
-              return section === 'evm' && method === 'Created';
-            }).map(({ event }) => event.data[1].toHex());
-
-            // TODO: error handling
-            resolve({
-              contractAddr1,
-              contractAddr2,
-            });
-          } else if (result.isError) {
-            reject({ result });
+          if (!addr1 || !addr2 || !addr3) {
+            throw new Error('some perfect error handling');
           }
-        });
-      });
 
-      console.log({
-        contractAddr1,
-        contractAddr2,
+          setDexAddress(addr1);
+          setTokenAAddress(addr2);
+          setTokenBAddress(addr3);
+        } else if (result.isError) {
+          throw new Error('some perfect error handling');
+        }
       });
-
-      setDexAddress(contractAddr1);
-      setTokenAAddress(contractAddr2);
-      setTokenBAddress(contractAddr2);
     } finally {
       setDeploying(false);
     }

@@ -1,6 +1,6 @@
 @import 'antd/dist/antd.css';
 
-$polkaPurple: rgb(230, 0, 122);
+$polkaOrange: #ff8c00;
 
 #app {
   font-size: larger;
@@ -29,16 +29,16 @@ $polkaPurple: rgb(230, 0, 122);
   .ant-btn {
     border-radius: 3px;
     width: 100%;
-    background-color: rgba($polkaPurple, 0.9);
+    background-color: rgba($polkaOrange, 1);
     border: none;
 
     &:hover {
-      background-color: rgba($polkaPurple, 0.65);
+      background-color: rgba($polkaOrange, 0.8);
       border: none;
     }
 
     &:disabled {
-      background-color: rgba($polkaPurple, 0.1);
+      background-color: rgba($polkaOrange, 0.2);
       color: black;
     }
   }
@@ -50,12 +50,12 @@ $polkaPurple: rgb(230, 0, 122);
   }
 
   .check {
-    color: $polkaPurple;
+    color: $polkaOrange;
   }
 
   .decorate {
     padding-left: 5px;
-    text-decoration: 2px solid rgba($polkaPurple, 0.65) underline;
+    text-decoration: 2px solid rgba($polkaOrange, 0.65) underline;
   }
 
   .cross {
@@ -70,7 +70,7 @@ $polkaPurple: rgb(230, 0, 122);
 
 #congrats {
   border-radius: 15px;
-  border: 2px solid rgba($polkaPurple, 0.65);
+  border: 2px solid rgba($polkaOrange, 0.65);
   padding: 25px 30px;
 
   div {
@@ -80,10 +80,10 @@ $polkaPurple: rgb(230, 0, 122);
 
   a {
     padding: 3px 5px;
-    border: 1px solid $polkaPurple;
+    border: 1px solid $polkaOrange;
     border-radius: 3px;
     margin-left: 5px;
-    color: $polkaPurple;
+    color: $polkaOrange;
   }
 }
 
