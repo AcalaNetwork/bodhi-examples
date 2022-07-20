@@ -1,0 +1,93 @@
+@import 'antd/dist/antd.css';
+
+$polkaPurple: rgb(230, 0, 122);
+
+#app {
+  font-size: larger;
+  // line-height: 2.5em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  // border: 1px solid red;
+}
+
+.step {
+  margin-top: 45px;
+  min-width: 450px;
+  // border: 1px solid blue;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  .step-text {
+    // background-color: #ddd;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+
+  .ant-btn {
+    border-radius: 3px;
+    width: 100%;
+    background-color: rgba($polkaPurple, 0.9);
+    border: none;
+
+    &:hover {
+      background-color: rgba($polkaPurple, 0.65);
+      border: none;
+    }
+
+    &:disabled {
+      background-color: rgba($polkaPurple, 0.1);
+      color: black;
+    }
+  }
+
+  .address {
+    border-radius: 5px;
+    padding: 2px 10px;
+    background-color: rgba(#aaa, 0.2);
+  }
+
+  .check {
+    color: $polkaPurple;
+  }
+
+  .decorate {
+    padding-left: 5px;
+    text-decoration: 2px solid rgba($polkaPurple, 0.65) underline;
+  }
+
+  .cross {
+    padding-left: 5px;
+    text-decoration: 2px solid line-through;
+  }
+
+  .ant-select {
+    min-width: 180px;
+  }
+}
+
+#congrats {
+  border-radius: 15px;
+  border: 2px solid rgba($polkaPurple, 0.65);
+  padding: 25px 30px;
+
+  div {
+    display: flex;
+    justify-content: center;
+  }
+
+  a {
+    padding: 3px 5px;
+    border: 1px solid $polkaPurple;
+    border-radius: 3px;
+    margin-left: 5px;
+    color: $polkaPurple;
+  }
+}
+
+#next-level {
+  margin-top: 20px;
+  // width: auto !important;
+}

@@ -1,5 +1,5 @@
 {
-  "name": "bodhi-signer-example-contract",
+  "name": "bodhi-signer-example-batch-transactions",
   "private": true,
   "version": "0.0.1",
   "scripts": {
