@@ -1,9 +1,8 @@
 import React, {
   useCallback, useEffect, useMemo, useState,
 } from 'react';
+import { MaxUint256 } from '@ethersproject/constants';
 import { Provider, Signer } from '@acala-network/bodhi';
-import { handleTxResponse } from '@acala-network/eth-providers/lib';
-import { TransactionReceipt } from '@ethersproject/abstract-provider';
 import { WsProvider, SubmittableResult } from '@polkadot/api';
 import { web3Enable } from '@polkadot/extension-dapp';
 import type {
@@ -12,8 +11,20 @@ import type {
 } from '@polkadot/extension-inject/types';
 import { Input, Button, Select } from 'antd';
 
-import { getDexDeployExtrinsic, getTokenDeployExtrinsic } from './utils';
+import {
+  deployUniFactory,
+  getAddLiquidityExtrinsic,
+  getTokenApproveExtrinsic,
+  getTokenDeployExtrinsic,
+  getUniFactoryDeployExtrinsic,
+  getUniRouterDeployExtrinsic,
+  queryDexLiquidity,
+  queryLiquidity,
+  queryTokenAllowance,
+  queryTokenBalance,
+} from './utils';
 import './App.scss';
+import { handleTxResponse } from '@acala-network/eth-providers';
 
 const { Option } = Select;
 
@@ -36,9 +47,15 @@ function App() {
   const [selectedAddress, setSelectedAddress] = useState<string>('');
   const [claimedEvmAddress, setClaimedEvmAddress] = useState<string>('');
   const [balance, setBalance] = useState<string>('');
-  const [dexAddress, setDexAddress] = useState<string>('');
-  const [tokenAAddress, setTokenAAddress] = useState<string>('');
-  const [tokenBAddress, setTokenBAddress] = useState<string>('');
+  const [uniCoreAddress, setUniCoreAddress] = useState<string>('');
+  const [uniRouterAddress, setUniRouterAddress] = useState<string>('');
+  const [token0Address, setToken0Address] = useState<string>('');
+  const [token1Address, setToken1Address] = useState<string>('');
+  const [token0Balance, setToken0Balance] = useState<string>('');
+  const [token1Balance, setToken1Balance] = useState<string>('');
+  const [token0Allowance, setToken0Allowance] = useState<string>('0');
+  const [token1Allowance, setToken1Allowance] = useState<string>('0');
+  const [liquidity, setLiquidity] = useState<string>('');
   // const [url, setUrl] = useState<string>('wss://acala-mandala.api.onfinality.io/public-ws');
   const [url, setUrl] = useState<string>('ws://localhost:9944');
 
@@ -119,14 +136,20 @@ function App() {
 
     setDeploying(true);
     try {
-      const extrinsic1 = await getDexDeployExtrinsic(signer);
-      const extrinsic2 = await getTokenDeployExtrinsic(signer, [1234567890]);
-      const extrinsic3 = await getTokenDeployExtrinsic(signer, [8888888888]);
+      // const extrinsic1 = await getUniFactoryDeployExtrinsic(signer);
+      const factoryAddr = await deployUniFactory(signer);
+      console.log({ factoryAddr });
+      setUniCoreAddress(factoryAddr);
+
+      const extrinsic2 = await getUniRouterDeployExtrinsic(signer, factoryAddr);
+      const extrinsic3 = await getTokenDeployExtrinsic(signer, [1000000000000]);
+      const extrinsic4 = await getTokenDeployExtrinsic(signer, [2000000000000]);
 
       const extrinsic = await provider.api.tx.utility.batchAll([
-        extrinsic1,
+        // extrinsic1,
         extrinsic2,
         extrinsic3,
+        extrinsic4,
       ]).signAsync(await signer.getSubstrateAddress());
 
       extrinsic.send((result: SubmittableResult) => {
@@ -139,9 +162,9 @@ function App() {
             throw new Error('some perfect error handling');
           }
 
-          setDexAddress(addr1);
-          setTokenAAddress(addr2);
-          setTokenBAddress(addr3);
+          setUniRouterAddress(addr1);
+          setToken0Address(addr2);
+          setToken1Address(addr3);
         } else if (result.isError) {
           throw new Error('some perfect error handling');
         }
@@ -151,22 +174,68 @@ function App() {
     }
   }, [signer, provider]);
 
-  /* ------------ Step 4: call contract ------------ */
-  // const callContract = useCallback(async (msg: string) => {
-  //   if (!signer) return;
-  //   setCalling(true);
-  //   setNewEchoMsg('');
-  //   try {
-  //     const instance = new Contract(dexAddress, dexContract.abi, signer);
+  // query token balance
+  useEffect(() => {
+    if (!token0Address || !token1Address || !signer) return;
 
-  //     await instance.scream(msg);
-  //     const newEcho = await instance.echo();
+    (async () => {
+      const evmAddr = await signer.getAddress();
+      const balance0 = await queryTokenBalance(signer, token0Address, evmAddr);
+      const balance1 = await queryTokenBalance(signer, token1Address, evmAddr);
 
-  //     setNewEchoMsg(newEcho);
-  //   } finally {
-  //     setCalling(false);
-  //   }
-  // }, [signer, dexAddress]);
+      setToken0Balance(balance0);
+      setToken1Balance(balance1);
+    })();
+  }, [token0Address, token1Address, liquidity]);
+
+  /* ------------ Step 3: batch approve + add liquidity ------------ */
+  const addLiquidity = useCallback(async () => {
+    if (!signer || !provider) return;
+
+    setCalling(true);
+    try {
+      const evmAddr = await signer.getAddress();
+      const extrinsic1 = await getTokenApproveExtrinsic(signer, token0Address, [uniRouterAddress, MaxUint256]);
+      const extrinsic2 = await getTokenApproveExtrinsic(signer, token1Address, [uniRouterAddress, MaxUint256]);
+      const extrinsic3 = await getAddLiquidityExtrinsic(signer, uniRouterAddress, [
+        token0Address, token1Address, 1000000, 2000000, 0, 0, evmAddr, MaxUint256,
+      ], true);
+
+      const extrinsic = await provider.api.tx.utility.batchAll([
+        extrinsic1,
+        extrinsic2,
+        extrinsic3,
+      ]).signAsync(await signer.getSubstrateAddress());
+
+      extrinsic.send((result: SubmittableResult) => {
+        if (result.status.isFinalized || result.status.isInBlock) {
+          handleTxResponse(result, provider.api);   // TODO: mainly for some error check
+
+          const failedEvent = result.events.find(
+            ({ event: { section, method } }) => (section === 'evm' && method === 'ExecutedFailed')
+          );
+
+          if (failedEvent) {
+            console.log('❗ tx failed');
+            throw new Error(JSON.stringify(failedEvent.event.data.toHuman()));
+          }
+
+          queryLiquidity(signer, uniCoreAddress, [token0Address, token1Address])
+            .then(liq => setLiquidity(liq));
+
+          queryTokenAllowance(signer, token0Address, [evmAddr, uniRouterAddress])
+            .then(a => setToken0Allowance(a));
+
+          queryTokenAllowance(signer, token1Address, [evmAddr, uniRouterAddress])
+            .then(a => setToken1Allowance(a));
+        } else if (result.isError) {
+          throw new Error('some perfect error handling');
+        }
+      });
+    } finally {
+      setCalling(false);
+    }
+  }, [signer, provider, token0Address, token1Address]);
 
   // eslint-disable-next-line
   const ExtensionSelect = () => (
@@ -175,7 +244,7 @@ function App() {
       <Select
         value={ curExtension?.name }
         onChange={ targetName => setCurExtension(extensionList.find(e => e.name === targetName)) }
-        disabled={ !!dexAddress }
+        disabled={ !!uniCoreAddress }
       >
         {extensionList.map(ex => (
           <Option key={ ex.name } value={ ex.name }>
@@ -193,7 +262,7 @@ function App() {
       <Select
         value={ selectedAddress }
         onChange={ value => setSelectedAddress(value) }
-        disabled={ !!dexAddress }
+        disabled={ !!uniCoreAddress }
       >
         {accountList.map(account => (
           <Option key={ account.address } value={ account.address }>
@@ -246,24 +315,83 @@ function App() {
 
       { /* ------------------------------ Step 2 ------------------------------*/}
       <section className='step'>
-        <div className='step-text'>Step 2: Batch Deploy 3 Contracts { dexAddress && <Check /> }</div>
+        <div className='step-text'>Step 2: Batch Deploy 3 Contracts { uniRouterAddress && <Check /> }</div>
         <Button
           type='primary'
-          disabled={ !signer || deploying || !!dexAddress }
+          disabled={ !signer || deploying || !!uniRouterAddress }
           onClick={ deploy }
         >
-          { dexAddress
+          { uniRouterAddress
             ? 'contract deployed'
             : deploying
               ? 'deploying ...'
               : 'deploy'}
         </Button>
 
-        {dexAddress && (<>
-          <div>Dex address: <span className='address'>{ dexAddress }</span></div>
-          <div>TokenA address: <span className='address'>{ tokenAAddress }</span></div>
-          <div>TokenB address: <span className='address'>{ tokenBAddress }</span></div>
-        </>)}
+        { uniRouterAddress && (
+          <>
+            <div>Uni Core address: <span className='address'>{ uniCoreAddress }</span></div>
+            <div>Uni Router address: <span className='address'>{ uniRouterAddress }</span></div>
+            <div>TokenA address: <span className='address'>{ token0Address }</span></div>
+            <div>TokenB address: <span className='address'>{ token1Address }</span></div>
+            <div>TokenA balance: <span className='address'>{ token0Balance }</span></div>
+            <div>TokenB balance: <span className='address'>{ token1Balance }</span></div>
+            <div>TokenA allowance: <span className='address'>{ token0Allowance }</span></div>
+            <div>TokenB allowance: <span className='address'>{ token1Allowance }</span></div>
+          </>
+        )}
+      </section>
+
+      { /* ------------------------------ Step 3 ------------------------------*/}
+      <section className='step'>
+        <div className='step-text'>Step 3: Batch Approve & Add Liquidity { liquidity !== '' && <Check /> }</div>
+        <Button
+          type='primary'
+          disabled={ uniRouterAddress === '' || liquidity !== '' }
+          onClick={ addLiquidity }
+        >
+          { liquidity !== ''
+            ? 'liquidity added'
+            : calling
+              ? 'sending batch calls ...'
+              : 'approve tokens + add liquidity'}
+        </Button>
+
+        { liquidity !== '' && (
+          <>
+            <div>TokenA balance: <span className='address'>{ token0Balance }</span></div>
+            <div>TokenB balance: <span className='address'>{ token1Balance }</span></div>
+            <div>Dex liquidity: <span className='address'>{ liquidity }</span></div>
+            <div>TokenA allowance: <span className='address'>{ token0Allowance }</span></div>
+            <div>TokenB allowance: <span className='address'>{ token1Allowance }</span></div>
+          </>
+        )}
+      </section>
+
+      { /* ------------------------------ Step 4 ------------------------------*/}
+      <section className='step'>
+        <div className='step-text'>Step 4: Batch Swap & Remove Allowance { uniCoreAddress && <Check /> }</div>
+        <Button
+          type='primary'
+          disabled={ liquidity === '' }
+          onClick={ addLiquidity }
+        >
+          { liquidity !== ''
+            ? 'liquidity added'
+            : calling
+              ? 'sending batch calls ...'
+              : 'approve tokens + add liquidity'}
+        </Button>
+
+        { liquidity !== '' && (
+          <>
+            <div>TokenA balance: <span className='address'>{ token0Balance }</span></div>
+            <div>TokenB balance: <span className='address'>{ token1Balance }</span></div>
+            <div>Dex liquidity: <span className='address'>{ liquidity }</span></div>
+            <div>TokenA allowance: <span className='address'>{ token0Allowance }</span></div>
+            <div>TokenB allowance: <span className='address'>{ token1Allowance }</span></div>
+          </>
+        )}
       </section>
 
       {false && (
