@@ -25,6 +25,7 @@ import {
 } from './utils';
 import './App.scss';
 import { handleTxResponse } from '@acala-network/eth-providers';
+import { getContractAddress } from '@ethersproject/address';
 
 const { Option } = Select;
 
@@ -56,8 +57,8 @@ function App() {
   const [token0Allowance, setToken0Allowance] = useState<string>('0');
   const [token1Allowance, setToken1Allowance] = useState<string>('0');
   const [liquidity, setLiquidity] = useState<string>('');
-  // const [url, setUrl] = useState<string>('wss://acala-mandala.api.onfinality.io/public-ws');
-  const [url, setUrl] = useState<string>('ws://localhost:9944');
+  const [url, setUrl] = useState<string>('wss://acala-mandala.api.onfinality.io/public-ws');
+  // const [url, setUrl] = useState<string>('ws://localhost:9944');
 
   /* ------------
     Step 1:
@@ -136,17 +137,18 @@ function App() {
 
     setDeploying(true);
     try {
-      // const extrinsic1 = await getUniFactoryDeployExtrinsic(signer);
-      const factoryAddr = await deployUniFactory(signer);
-      console.log({ factoryAddr });
-      setUniCoreAddress(factoryAddr);
+      // TODO: save signer addr
+      const evmAddr = await signer.getAddress();
+      const txCount = await signer.getTransactionCount('latest');
+      const predictedUniCoreAddr = getContractAddress({ from: evmAddr, nonce: txCount });
 
-      const extrinsic2 = await getUniRouterDeployExtrinsic(signer, factoryAddr);
+      const extrinsic1 = await getUniFactoryDeployExtrinsic(signer, evmAddr);
+      const extrinsic2 = await getUniRouterDeployExtrinsic(signer, predictedUniCoreAddr);
       const extrinsic3 = await getTokenDeployExtrinsic(signer, [1000000000000]);
       const extrinsic4 = await getTokenDeployExtrinsic(signer, [2000000000000]);
 
       const extrinsic = await provider.api.tx.utility.batchAll([
-        // extrinsic1,
+        extrinsic1,
         extrinsic2,
         extrinsic3,
         extrinsic4,
@@ -154,7 +156,7 @@ function App() {
 
       extrinsic.send((result: SubmittableResult) => {
         if (result.status.isFinalized || result.status.isInBlock) {
-          const [addr1, addr2, addr3] = result.events.filter(
+          const [addr1, addr2, addr3, addr4] = result.events.filter(
             ({ event: { section, method } }) => (section === 'evm' && method === 'Created')
           ).map(({ event }) => event.data[1].toHex());
 
@@ -162,14 +164,17 @@ function App() {
             throw new Error('some perfect error handling');
           }
 
-          setUniRouterAddress(addr1);
-          setToken0Address(addr2);
-          setToken1Address(addr3);
+          setUniCoreAddress(addr1);
+          setUniRouterAddress(addr2);
+          setToken0Address(addr3);
+          setToken1Address(addr4);
+
+          setDeploying(false);
         } else if (result.isError) {
           throw new Error('some perfect error handling');
         }
       });
-    } finally {
+    } catch {
       setDeploying(false);
     }
   }, [signer, provider]);
@@ -220,19 +225,22 @@ function App() {
             throw new Error(JSON.stringify(failedEvent.event.data.toHuman()));
           }
 
-          queryLiquidity(signer, uniCoreAddress, [token0Address, token1Address])
-            .then(liq => setLiquidity(liq));
+          Promise.all([
+            queryLiquidity(signer, uniCoreAddress, [token0Address, token1Address]),
+            queryTokenAllowance(signer, token0Address, [evmAddr, uniRouterAddress]),
+            queryTokenAllowance(signer, token1Address, [evmAddr, uniRouterAddress]),
+          ]).then(([liq, a0, a1]) => {
+            setLiquidity(liq);
+            setToken0Allowance(a0);
+            setToken1Allowance(a1);
 
-          queryTokenAllowance(signer, token0Address, [evmAddr, uniRouterAddress])
-            .then(a => setToken0Allowance(a));
-
-          queryTokenAllowance(signer, token1Address, [evmAddr, uniRouterAddress])
-            .then(a => setToken1Allowance(a));
+            setCalling(false);
+          });
         } else if (result.isError) {
           throw new Error('some perfect error handling');
         }
       });
-    } finally {
+    } catch {
       setCalling(false);
     }
   }, [signer, provider, token0Address, token1Address]);
@@ -315,17 +323,17 @@ function App() {
 
       { /* ------------------------------ Step 2 ------------------------------*/}
       <section className='step'>
-        <div className='step-text'>Step 2: Batch Deploy 3 Contracts { uniRouterAddress && <Check /> }</div>
+        <div className='step-text'>Step 2: Batch Deploy Uniswap & Tokens Contracts { uniRouterAddress && <Check /> }</div>
         <Button
           type='primary'
           disabled={ !signer || deploying || !!uniRouterAddress }
           onClick={ deploy }
         >
           { uniRouterAddress
-            ? 'contract deployed'
+            ? 'all contracts deploy'
             : deploying
-              ? 'deploying ...'
-              : 'deploy'}
+              ? 'deploying all 4 contracts together ...'
+              : 'batch deploy'}
         </Button>
 
         { uniRouterAddress && (
@@ -368,43 +376,19 @@ function App() {
         )}
       </section>
 
-      { /* ------------------------------ Step 4 ------------------------------*/}
-      <section className='step'>
-        <div className='step-text'>Step 4: Batch Swap & Remove Allowance { uniCoreAddress && <Check /> }</div>
-        <Button
-          type='primary'
-          disabled={ liquidity === '' }
-          onClick={ addLiquidity }
-        >
-          { liquidity !== ''
-            ? 'liquidity added'
-            : calling
-              ? 'sending batch calls ...'
-              : 'approve tokens + add liquidity'}
-        </Button>
-
-        { liquidity !== '' && (
-          <>
-            <div>TokenA balance: <span className='address'>{ token0Balance }</span></div>
-            <div>TokenB balance: <span className='address'>{ token1Balance }</span></div>
-            <div>Dex liquidity: <span className='address'>{ liquidity }</span></div>
-            <div>TokenA allowance: <span className='address'>{ token0Allowance }</span></div>
-            <div>TokenB allowance: <span className='address'>{ token1Allowance }</span></div>
-          </>
-        )}
-      </section>
-
-      {false && (
+      { liquidity !== '' && (
         <section className='step' id='congrats'>
           <div>Congratulations 🎉🎉</div>
-          <div>You have succesfully deployed and called an EVM+ contract with <span className='cross'>metamask</span><span className='decorate'>polkadot wallet</span></div>
-          <Button
+          <div>You have succesfully setup uniswap with <span className='decorate'>ONE</span> signature</div>
+          <div>Interacted with contracts via <span className='decorate'>BATCH</span> transations</div>
+          <div>Powered by <span className='decorate'>Acala EVM+</span></div>
+          {/* <Button
             id='next-level'
             type='primary'
             onClick={ () => window.open('https://github.com/AcalaNetwork/bodhi-examples/tree/master/batch-transactions', '_blank') }
           >
             Take Me To Advanced Example (Coming Soon)
-          </Button>
+          </Button> */}
         </section>
       )}
     </div>

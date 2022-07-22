@@ -11,6 +11,7 @@
   "dependencies": {
     "@acala-network/bodhi": "^2.4.18",
     "@acala-network/eth-providers": "^2.4.19",
+    "@ethersproject/address": "^5.6.1",
     "@ethersproject/constants": "^5.6.1",
     "@polkadot/extension-dapp": "^0.44.1",
     "antd": "^4.21.6",

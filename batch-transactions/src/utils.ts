@@ -76,19 +76,11 @@ export const getCallExtrinsic = async (signer: Signer, abi: any, contractAddr: s
   );
 };
 
-export const deployUniFactory = async (signer: Signer): Promise<string> => {
-  const factory = new ContractFactory(uniFactoryContract.abi, uniFactoryContract.bytecode, signer);
-  const instance = await factory.deploy(await signer.getAddress());
-  await instance.deployed();
-
-  return instance.address;
-};
-
 /* ----------------------------
      extrinsic constructors
 ------------------------------- */
-export const getUniFactoryDeployExtrinsic = async (signer: Signer) => (
-  getDeployExtrinsic(signer, uniFactoryContract.abi, uniFactoryContract.bytecode)
+export const getUniFactoryDeployExtrinsic = async (signer: Signer, addr: string) => (
+  getDeployExtrinsic(signer, uniFactoryContract.abi, uniFactoryContract.bytecode, [addr])
 );
 
 const DUMMY_WETH_ADDR = '0xB7d729C983b819611E68DAee71b4A2C950f86dc8';
