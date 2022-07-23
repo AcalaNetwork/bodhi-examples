@@ -248,6 +248,7 @@ Now that we have access to the `Signer` as well as the network, we can return ad
         setLoadingAccountInfo(false);
       }
     }());
+  }, [signer]);
 ````
 
 ### Deploy the smart contract
