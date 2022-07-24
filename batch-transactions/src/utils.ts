@@ -131,3 +131,5 @@ export const queryLiquidity = async (signer: Signer, uniCoreAddr: string, tokens
   const res = await pair.callStatic.balanceOf(await signer.getAddress());
   return res.toString();
 };
+
+export const diff = (x: string, y: string) => (Number(x) - Number(y));

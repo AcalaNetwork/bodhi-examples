@@ -28,7 +28,8 @@ module.exports = {
     'arrow-parens': [2, 'as-needed'],
     'react/jsx-curly-spacing': [2, {
       when: 'always',
-      spacing: { objectLiterals: 'never' },
+      children: true,                        // <>{ xxx }</>
+      spacing: { objectLiterals: 'never' },  // <>{{ x }}</>
     }],
     'no-restricted-syntax': [
       'error',
