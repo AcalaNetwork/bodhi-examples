@@ -26,7 +26,7 @@ import {
   queryLiquidity,
   queryTokenAllowance,
   queryTokenBalance,
-} from './utils';
+} from './utils/utils';
 import './App.scss';
 
 const { Option } = Select;
@@ -75,8 +75,8 @@ function App() {
   const [token0NewAllowance, setToken0NewAllowance] = useState<string>('');
   const [token1NewAllowance, setToken1NewAllowance] = useState<string>('');
 
-  const congratsEle = useRef<HTMLElement>();
-  const recycleEle = useRef<HTMLElement>();
+  const congratsEle = useRef<HTMLElement>(null);
+  const recycleEle = useRef<HTMLElement>(null);
 
   useLayoutEffect(() => {
     if (recycleEle.current) {
@@ -156,7 +156,7 @@ function App() {
     }());
   }, [signer]);
 
-  /* ------------ Step 2: deploy contracts ------------ */
+  /* ------------ Step 2: batch deploy contracts ------------ */
   const deploy = useCallback(async () => {
     if (!signer || !provider) return;
 
@@ -292,7 +292,7 @@ function App() {
     }
   }, [signer, provider, token0Address, token1Address, input0, input1]);
 
-  /* ------------ Hidden Step: recycle all contracts ------------ */
+  /* ------------ Bonus Step: recycle all contracts ------------ */
   const recycle = useCallback(async () => {
     if (!signer || !provider) return;
 
@@ -315,6 +315,8 @@ function App() {
             throw err;
           });
 
+          // sometimes ACA refund from recycling contract is delayed
+          // so we poll the balance until it is updated
           const i = setInterval(() => {
             signer.getBalance().then(bal => {
               console.log('check balance', formatUnits(bal), balance[2]);
@@ -395,7 +397,7 @@ function App() {
           { connecting
             ? <><StarOutlined spin /> connecting ...</>
             : provider
-              ? `connected to ${provider.api.runtimeChain.toString()} 🎉`
+              ? `connected to ${provider.api.runtimeChain.toString()}`
               : 'connect' }
         </Button>
 

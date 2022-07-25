@@ -1,6 +1,10 @@
-import { ContractFactory, Contract, BigNumber, ContractInterface } from 'ethers';
-import { Signer } from '@acala-network/bodhi';
-import { toBN } from './utils-from-bodhi';
+import {
+  ContractInterface,
+  ContractFactory,
+  Contract,
+  BigNumber,
+} from 'ethers';
+import { Signer, toBN } from '@acala-network/bodhi';
 
 import uniFactoryContract from './UniswapV2Factory.json';
 import uniRouterContract from './UniswapV2Router.json';
