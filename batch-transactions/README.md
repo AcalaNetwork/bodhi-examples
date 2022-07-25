@@ -3,6 +3,8 @@ One of the advanced feature of EVM+, compared to traditional EVM, is the ability
 
 This example will show how to batch transactions with polkadot wallet and [bodhi.js](https://github.com/AcalaNetwork/bodhi.js/)，so users can deploy multiple contracts at once, and perform `approve token` and `add liquidity` transactions within a single transaction.
 
+app: https://bodhi-examples-batch-transactions.vercel.app/
+
 ## Run
 - start a dev server: `yarn dev`
 - build: `yarn build`
