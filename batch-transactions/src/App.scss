@@ -1,0 +1,120 @@
+@import 'antd/dist/antd.css';
+
+$polkaOrange: #ff8c00;
+$red: #ff6666;
+$green: #00cc99;
+
+#app {
+  padding-bottom: 100px;
+  font-size: larger;
+  // line-height: 2.5em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  // border: 1px solid red;
+}
+
+.step {
+  margin-top: 45px;
+  min-width: 450px;
+  // border: 1px solid blue;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  .step-text {
+    // background-color: #ddd;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+
+  .ant-btn {
+    border-radius: 3px;
+    width: 100%;
+    background-color: rgba($polkaOrange, 1);
+    border: none;
+
+    &:hover {
+      background-color: rgba($polkaOrange, 0.8);
+      border: none;
+    }
+
+    &:disabled {
+      background-color: rgba($polkaOrange, 0.2);
+      color: black;
+    }
+  }
+
+  .bgHighlight {
+    border-radius: 5px;
+    padding: 2px 10px;
+    margin-left: 3px;
+  }
+
+  .grayLight {
+    @extend .bgHighlight;
+    background-color: rgba(#aaa, 0.2);
+  }
+
+  .redLight {
+    @extend .bgHighlight;
+    background-color: rgba($red, 0.2);
+
+    svg {
+      color: $red;
+    }
+  }
+
+  .greenLight {
+    @extend .bgHighlight;
+    background-color: rgba($green, 0.23);
+
+    svg {
+      color: $green;
+    }
+  }
+
+  .check {
+    color: $polkaOrange;
+  }
+
+  .decorate {
+    padding: 0 5px;
+    text-decoration: 2px solid rgba($polkaOrange, 0.65) underline;
+  }
+
+  .cross {
+    padding-left: 5px;
+    text-decoration: 2px solid line-through;
+  }
+
+  .ant-select {
+    min-width: 180px;
+  }
+}
+
+#congrats {
+  // margin-bottom: 100px;
+  border-radius: 15px;
+  border: 2px solid rgba($polkaOrange, 0.65);
+  padding: 25px 30px;
+
+  div {
+    display: flex;
+    justify-content: center;
+  }
+
+  a {
+    padding: 3px 5px;
+    border: 1px solid $polkaOrange;
+    border-radius: 3px;
+    margin-left: 5px;
+    color: $polkaOrange;
+  }
+}
+
+#next-level {
+  margin-top: 20px;
+  // width: auto !important;
+}

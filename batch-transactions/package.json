@@ -1,5 +1,5 @@
 {
-  "name": "bodhi-signer-example-contract",
+  "name": "bodhi-signer-example-batch-transactions",
   "private": true,
   "version": "0.0.1",
   "scripts": {
@@ -9,10 +9,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@acala-network/bodhi": "^2.4.18",
+    "@acala-network/bodhi": "^2.4.20",
+    "@acala-network/eth-providers": "^2.4.19",
+    "@ant-design/icons": "^4.7.0",
+    "@ethersproject/address": "^5.6.1",
+    "@ethersproject/constants": "^5.6.1",
+    "@polkadot/api": "8.1.1",
     "@polkadot/extension-dapp": "^0.44.1",
     "antd": "^4.21.6",
+    "ethers": "^5.6.9",
     "react": "^18.0.0",
+    "react-confetti": "^6.1.0",
     "react-dom": "^18.0.0"
   },
   "devDependencies": {
