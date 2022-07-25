@@ -45,6 +45,10 @@ module.exports = {
       exports: 'always-multiline',
       functions: 'never',
     }],
+    // use TS's no-unused-vars check since eslint isn't aware of types
+    // for example onChange: (x: string) => void,
+    'no-unused-vars': 0,
+    '@typescript-eslint/no-unused-vars': 2,
 
     /* ---------- turned off ---------- */
     'no-console': 0,

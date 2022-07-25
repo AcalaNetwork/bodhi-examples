@@ -6,10 +6,10 @@ import {
 } from 'ethers';
 import { Signer, toBN } from '@acala-network/bodhi';
 
-import uniFactoryContract from './UniswapV2Factory.json';
-import uniRouterContract from './UniswapV2Router.json';
-import IUniswapV2Pair from './IUniswapV2Pair.json';
-import tokenContract from './Token.json';
+import uniFactoryContract from '../contracts/UniswapV2Factory.json';
+import uniRouterContract from '../contracts/UniswapV2Router.json';
+import IUniswapV2Pair from '../contracts/IUniswapV2Pair.json';
+import tokenContract from '../contracts/Token.json';
 
 // TODO: maybe export these 2 factory from bodhi?
 /* --------------------------------------------------------

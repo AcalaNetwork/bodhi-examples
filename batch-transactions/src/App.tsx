@@ -1,4 +1,5 @@
 import React, {
+  ReactNode,
   useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState,
 } from 'react';
 import { WsProvider, SubmittableResult } from '@polkadot/api';
@@ -12,8 +13,8 @@ import { handleTxResponse } from '@acala-network/eth-providers';
 import { getContractAddress } from '@ethersproject/address';
 import { MaxUint256 } from '@ethersproject/constants';
 import { formatUnits } from 'ethers/lib/utils';
-import { Input, Button, Select } from 'antd';
-import { ArrowDownOutlined, ArrowUpOutlined, StarOutlined } from '@ant-design/icons';
+import { Input, Button } from 'antd';
+import { StarOutlined } from '@ant-design/icons';
 import Confetti from 'react-confetti';
 
 import {
@@ -28,12 +29,11 @@ import {
   queryTokenBalance,
 } from './utils/utils';
 import './App.scss';
+import {
+  AccountSelect, Check, DataGray, DataGreen, DataRed, ExtensionSelect,
+} from './utils/components';
 
-const { Option } = Select;
-
-const Check = () => (<span className='check'>✓</span>);
-
-function App() {
+const App = () => {
   /* ---------- extensions ---------- */
   const [extensionList, setExtensionList] = useState<InjectedExtension[]>([]);
   const [curExtension, setCurExtension] = useState<InjectedExtension | undefined>(undefined);
@@ -91,12 +91,12 @@ function App() {
       - connect to chain node with a provider
       - connect polkadot wallet
                                  ------------ */
-  const connectProviderAndWallet = useCallback(async (nodeUrl: string) => {
+  const connectProviderAndWallet = useCallback(async () => {
     setConnecting(true);
     try {
       // connect provider
       const signerProvider = new Provider({
-        provider: new WsProvider(nodeUrl.trim()),
+        provider: new WsProvider(url.trim()),
       });
       await signerProvider.isReady();
       setProvider(signerProvider);
@@ -111,7 +111,7 @@ function App() {
     } finally {
       setConnecting(false);
     }
-  }, []);
+  }, [url]);
 
   useEffect(() => {
     curExtension?.accounts.get().then(result => {
@@ -340,42 +340,6 @@ function App() {
     }
   }, [signer, provider, uniCoreAddress, uniRouterAddress, token0Address, token1Address, balance]);
 
-  // eslint-disable-next-line
-  const ExtensionSelect = () => (
-    <div>
-      <span style={{ marginRight: 10 }}>select a polkadot wallet:</span>
-      <Select
-        value={ curExtension?.name }
-        onChange={ targetName => setCurExtension(extensionList.find(e => e.name === targetName)) }
-        disabled={ !!uniCoreAddress }
-      >
-        { extensionList.map(ex => (
-          <Option key={ ex.name } value={ ex.name }>
-            { `${ex.name}/${ex.version}` }
-          </Option>
-        )) }
-      </Select>
-    </div>
-  );
-
-  // eslint-disable-next-line
-  const AccountSelect = () => (
-    <div>
-      <span style={{ marginRight: 10 }}>account:</span>
-      <Select
-        value={ selectedAddress }
-        onChange={ value => setSelectedAddress(value) }
-        disabled={ !!uniCoreAddress }
-      >
-        { accountList.map(account => (
-          <Option key={ account.address } value={ account.address }>
-            { account.name } / { account.address }
-          </Option>
-        )) }
-      </Select>
-    </div>
-  );
-
   return (
     <div id='app'>
       { /* ------------------------------ Step 1 ------------------------------*/ }
@@ -391,7 +355,7 @@ function App() {
 
         <Button
           type='primary'
-          onClick={ () => connectProviderAndWallet(url) }
+          onClick={ connectProviderAndWallet }
           disabled={ connecting || !!provider }
         >
           { connecting
@@ -401,15 +365,26 @@ function App() {
               : 'connect' }
         </Button>
 
-        { !!extensionList?.length && <ExtensionSelect /> }
-        { !!accountList?.length && <AccountSelect /> }
+        <ExtensionSelect
+          extensionList={ extensionList }
+          curExtension={ curExtension }
+          onChange={ targetName => setCurExtension(extensionList.find(e => e.name === targetName)) }
+          disabled={ !!uniCoreAddress }
+        />
+
+        <AccountSelect
+          accountList={ accountList }
+          selectedAddress={ selectedAddress }
+          onChange={ setSelectedAddress }
+          disabled={ !!uniCoreAddress }
+        />
 
         { signer && (
           <div>
             { loadingAccount
               ? 'loading account info ...'
-              : <div>claimed/default evm address: <span className='grayLight'>{ evmAddress }</span></div> }
-            { balance[0] && <div>account balance: <span className='grayLight'>{ balance[0] }</span></div> }
+              : <div>claimed/default evm address: <DataGray value={ evmAddress } /></div> }
+            { balance[0] && <div>account balance: <DataGray value={ balance[0] } /></div> }
           </div>
         ) }
       </section>
@@ -431,16 +406,19 @@ function App() {
 
         { uniRouterAddress && (
           <>
-            <div>uni core address: <span className='grayLight'>{ uniCoreAddress }</span></div>
-            <div>uni router address: <span className='grayLight'>{ uniRouterAddress }</span></div>
-            <div>tokenA address: <span className='grayLight'>{ token0Address }</span></div>
-            <div>tokenB address: <span className='grayLight'>{ token1Address }</span></div>
-            <div>tokenA balance: <span className='grayLight'>{ token0Balance }</span></div>
-            <div>tokenB balance: <span className='grayLight'>{ token1Balance }</span></div>
-            <div>tokenA allowance: <span className='grayLight'>{ token0Allowance }</span></div>
-            <div>tokenB allowance: <span className='grayLight'>{ token1Allowance }</span></div>
-            <div>dex liquidity: <span className='grayLight'>0x00</span></div>
-            { balance[1] && <div>account balance: <span className='grayLight'>{ balance[1] }</span><span className='redLight'><ArrowDownOutlined /> { diff(balance[0], balance[1]) }</span></div> }
+            <div>uni core address: <DataGray value={ uniCoreAddress } /></div>
+            <div>uni router address: <DataGray value={ uniRouterAddress } /></div>
+            <div>tokenA address: <DataGray value={ token0Address } /></div>
+            <div>tokenB address: <DataGray value={ token1Address } /></div>
+            <div>tokenA balance: <DataGray value={ token0Balance } /></div>
+            <div>tokenB balance: <DataGray value={ token1Balance } /></div>
+            <div>tokenA allowance: <DataGray value={ token0Allowance } /></div>
+            <div>tokenB allowance: <DataGray value={ token1Allowance } /></div>
+            <div>dex liquidity: <DataGray value='0x00' /></div>
+            <div>
+              account balance: <DataGray value={ balance[1] || 'loading' } />
+              { balance[1] && <DataRed value={ diff(balance[0], balance[1]) } /> }
+            </div>
           </>
         ) }
       </section>
@@ -476,13 +454,14 @@ function App() {
 
         { liquidity !== '0' && (
           <>
-            <div>tokenA balance: <span className='grayLight'>{ token0NewBalance }</span><span className='redLight'><ArrowDownOutlined /> { diff(token0Balance, token0NewBalance) }</span></div>
-            <div>tokenB balance: <span className='grayLight'>{ token1NewBalance }</span><span className='redLight'><ArrowDownOutlined /> { diff(token1Balance, token1NewBalance) }</span></div>
-            <div>tokenA allowance: <span className='grayLight'>{ token0NewAllowance }</span><span className='greenLight'><ArrowUpOutlined /> ♾️</span></div>
-            <div>tokenB allowance: <span className='grayLight'>{ token1NewAllowance }</span><span className='greenLight'><ArrowUpOutlined /> ♾️</span></div>
-            <div>dex liquidity: <span className='grayLight'>{ liquidity }</span><span className='greenLight'><ArrowUpOutlined /> { liquidity }</span></div>
-            <div>account balance: <span className='grayLight'>{ balance[2] || 'loading...' }</span>
-              { balance[2] && <span className='redLight'><ArrowDownOutlined /> { diff(balance[1], balance[2]) }</span> }
+            <div>tokenA balance: <DataGray value={ token0NewBalance } /><DataRed value={ diff(token0Balance, token0NewBalance) } /></div>
+            <div>tokenB balance: <DataGray value={ token1NewBalance } /><DataRed value={ diff(token1Balance, token1NewBalance) } /></div>
+            <div>tokenA allowance: <DataGray value={ token0NewAllowance } /><DataGreen value='♾️' /></div>
+            <div>tokenB allowance: <DataGray value={ token1NewAllowance } /><DataGreen value='♾️' /></div>
+            <div>dex liquidity: <DataGray value={ liquidity } /><DataGreen value={ liquidity } /></div>
+            <div>
+              account balance: <DataGray value={ balance[2] || 'loading...' } />
+              { balance[2] && <DataRed value={ diff(balance[1], balance[2]) } /> }
             </div>
           </>
         ) }
@@ -532,14 +511,14 @@ function App() {
                 : 'bye uniswap 😭' }
           </Button>
 
-          <div>account balance: <span className='grayLight'>{ balance[2] }</span></div>
+          <div>current account balance: <DataGray value={ balance[2] } /></div>
           { finished && (
-            <div>final account balance: <span className='grayLight'>{ balance[3] }</span><span className='greenLight'><ArrowUpOutlined /> { diff(balance[3], balance[2]) }</span></div>
+            <div>final account balance: <DataGray value={ balance[3] } /><DataGreen value={ diff(balance[3], balance[2]) } /></div>
           ) }
         </section>
       ) }
     </div>
   );
-}
+};
 
 export default App;
