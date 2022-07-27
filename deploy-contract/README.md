@@ -802,7 +802,7 @@ This conclues our example dApp that showcases how a Polkadot wallet can be used 
 
 ## Running the example
 
-Initializing `vite` template already added the `dev`, which is used to run the development server, and `build` scripts. The build command is used to build the dApp:
+Initializing `vite` template already added the `preview`, which is used to run the preview of the dApp, and `build` scripts. The build command is used to build the dApp:
 
 ````shell
 yarn build
@@ -820,6 +820,20 @@ dist/assets/index.9912a485.js    3268.36 KiB / gzip: 1044.98 KiB
 - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
 ✨  Done in 15.99s.
 ````
+
+Running `yarn preview` should return the following output:
+
+````shell
+yarn preview
+yarn run v1.22.19
+$ vite preview
+  ➜  Local:   http://localhost:4173/
+  ➜  Network: use --host to expose
+````
+
+Visiting the URL specified in the outout should return the locall address where you can see the dApp:
+
+![dApp preview](./img/preview.png)
 
 We can also add a `lint` script to the `package.json` in order to lint the dApp:
 
