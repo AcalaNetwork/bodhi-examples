@@ -60,7 +60,7 @@ const App = () => {
   const [input0, setInput0] = useState<string>('123456');
   const [input1, setInput1] = useState<string>('888888');
   const [liquidity, setLiquidity] = useState<string>('0');
-  const [url, setUrl] = useState<string>('wss://acala-mandala.api.onfinality.io/public-ws');
+  const [url, setUrl] = useState<string>('wss://mandala-rpc.aca-staging.network/ws');
   // const [url, setUrl] = useState<string>('ws://localhost:9944');
 
   // init data
