@@ -518,7 +518,7 @@ successful completion of the example flow:
             type='primary'
             onClick={ () => window.open('https://github.com/AcalaNetwork/bodhi-examples/tree/master/batch-transactions', '_blank') }
           >
-            Take Me To Advanced Example (Coming Soon)
+            Take Me To Advanced Example
           </Button>
         </section>
       )}
@@ -826,7 +826,7 @@ Acala EVM+.
                             type='primary'
                             onClick={ () => window.open('https://github.com/AcalaNetwork/bodhi-examples/tree/master/batch-transactions', '_blank') }
                         >
-                            Take Me To Advanced Example (Coming Soon)
+                            Take Me To Advanced Example
                         </Button>
                     </section>
                 )}
