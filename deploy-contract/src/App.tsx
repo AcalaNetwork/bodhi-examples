@@ -9,6 +9,7 @@ import type {
   InjectedAccount,
 } from '@polkadot/extension-inject/types';
 import { ContractFactory, Contract } from 'ethers';
+import { formatUnits } from 'ethers/lib/utils';
 import { Input, Button, Select } from 'antd';
 import echoContract from './Echo.json';
 
@@ -99,7 +100,7 @@ function App() {
           signer.queryEvmAddress(),
           signer.getBalance(),
         ]);
-        setBalance(accountBalance.toString());
+        setBalance(formatUnits(accountBalance));
         setClaimedEvmAddress(evmAddress);
       } catch (error) {
         console.error(error);

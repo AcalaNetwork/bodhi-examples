@@ -8,9 +8,16 @@
     "lint": "tsc --noEmit; eslint . --ext .js,.jsx,.ts,.tsx",
     "preview": "vite preview"
   },
+  "resolutions": {
+    "@polkadot/api": "^9.13.2",
+    "@polkadot/api-derive": "^9.13.2",
+    "@polkadot/api-augment": "^9.13.2",
+    "@polkadot/types": "^9.13.2",
+    "@polkadot/util-crypto": "^10.3.1"
+  },
   "dependencies": {
-    "@acala-network/bodhi": "^2.4.18",
-    "@polkadot/extension-dapp": "^0.44.1",
+    "@acala-network/bodhi": "^2.5.13",
+    "@polkadot/extension-dapp": "^0.44.8",
     "antd": "^4.21.6",
     "react": "^18.0.0",
     "react-dom": "^18.0.0"

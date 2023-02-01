@@ -53,6 +53,9 @@ const App = () => {
   const [balance, setBalance] = useState<string[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<string>('');
   const [evmAddress, setEvmAddress] = useState<string>('');
+  const [isClaimed, setIsClaimed] = useState<boolean>(false);
+  const [isClaiming, setIsClaiming] = useState<boolean>(false);
+
   const [uniCoreAddress, setUniCoreAddress] = useState<string>('');
   const [uniRouterAddress, setUniRouterAddress] = useState<string>('');
   const [token0Address, setToken0Address] = useState<string>('');
@@ -140,13 +143,15 @@ const App = () => {
 
       setLoadingAccountInfo(true);
       try {
-        const [evmAddr, accountBalance] = await Promise.all([
+        const [evmAddr, accountBalance, claimed] = await Promise.all([
           signer.getAddress(),
           signer.getBalance(),
+          signer.isClaimed(),
         ]);
 
         setBalance([formatUnits(accountBalance)]);
         setEvmAddress(evmAddr);
+        setIsClaimed(claimed);
       } catch (error) {
         console.error(error);
         setEvmAddress('');
@@ -155,6 +160,20 @@ const App = () => {
       }
     }());
   }, [signer]);
+
+  const claimDefaultAccount = useCallback(async () => {
+    if (!signer) return;
+
+    setIsClaiming(true)
+    try {
+      await signer.claimDefaultAccount()
+    } finally {
+      setIsClaiming(false)
+      setIsClaimed(true)
+      const balance = await signer.getBalance()
+      setBalance([formatUnits(balance)])
+    }
+  }, [signer, setIsClaiming])
 
   /* ------------ Step 2: batch deploy contracts ------------ */
   const deploy = useCallback(async () => {
@@ -184,8 +203,14 @@ const App = () => {
            - sign and send the `batchAll` extrinsic
            - handle result in the callback function
                                          ---------- */
+
+      let handled = false
       await batchDeploy.signAndSend(selectedAddress, (result: SubmittableResult) => {
-        if (result.status.isInBlock) {
+        if (handled) return;
+
+        if (result.status.isInBlock || result.status.isFinalized) {
+          handled = true
+
           // this is mainly for some error checking
           handleTxResponse(result, provider.api).catch(err => {
             console.log('❗ tx failed');
@@ -257,8 +282,13 @@ const App = () => {
            - sign and send the `batchAll` extrinsic
            - handle result in the callback function
                                          ---------- */
+      let handled = false
       await batchCall.signAndSend(selectedAddress, (result: SubmittableResult) => {
-        if (result.status.isInBlock) {
+        if (handled) return;
+
+        if (result.status.isInBlock || result.status.isFinalized) {
+          handled = true
+
           // this is mainly for some error checking
           handleTxResponse(result, provider.api).catch(err => {
             console.log('❗ tx failed');
@@ -307,8 +337,13 @@ const App = () => {
 
       const batchCall = provider.api.tx.utility.batchAll(recycleExtrinsics);
 
+      let handled = false
       await batchCall.signAndSend(selectedAddress, (result: SubmittableResult) => {
-        if (result.status.isInBlock) {
+        if (handled) return;
+
+        if (result.status.isInBlock || result.status.isFinalized) {
+          handled = true
+
           // this is mainly for some error checking
           handleTxResponse(result, provider.api).catch(err => {
             console.log('❗ tx failed');
@@ -383,8 +418,12 @@ const App = () => {
           <div>
             { loadingAccount
               ? 'loading account info ...'
-              : <div>claimed/default evm address: <DataGray value={ evmAddress } /></div> }
-            { balance[0] && <div>account balance: <DataGray value={ balance[0] } /></div> }
+              : <>
+                  <div>{ isClaimed ? 'claimed' : 'default' } evm address: <DataGray value={ evmAddress } /></div>
+                  { isClaimed && balance[0] && <div>account balance: <DataGray value={ balance[0] } /></div> }
+                  { !isClaimed && <Button type='primary' disabled={isClaiming} onClick={ claimDefaultAccount }>{ isClaiming ? <><StarOutlined spin /> claiming...</> : 'claim default evm address' }</Button> }
+                </>
+            }
           </div>
         ) }
       </section>
