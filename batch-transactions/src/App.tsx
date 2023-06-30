@@ -169,8 +169,8 @@ const App = () => {
     } finally {
       setIsClaiming(false);
       setIsClaimed(true);
-      const balance = await signer.getBalance();
-      setBalance([formatUnits(balance)]);
+      const bal = await signer.getBalance();
+      setBalance([formatUnits(bal)]);
     }
   }, [signer, setIsClaiming]);
 

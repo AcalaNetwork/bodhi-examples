@@ -30,11 +30,13 @@ function App() {
   const [loadingAccount, setLoadingAccountInfo] = useState(false);
   const [deploying, setDeploying] = useState(false);
   const [calling, setCalling] = useState(false);
+  const [isClaiming, setIsClaiming] = useState<boolean>(false);
 
   /* ---------- data ---------- */
   const [provider, setProvider] = useState<BodhiProvider | null>(null);
   const [selectedAddress, setSelectedAddress] = useState<string>('');
-  const [claimedEvmAddress, setClaimedEvmAddress] = useState<string>('');
+  const [evmAddress, setEvmAddress] = useState<string>('');
+  const [isClaimed, setIsClaimed] = useState<boolean>(false);
   const [balance, setBalance] = useState<string>('');
   const [deployedAddress, setDeployedAddress] = useState<string>('');
   const [echoInput, setEchoInput] = useState<string>('calling an EVM+ contract with polkadot wallet!');
@@ -84,6 +86,20 @@ function App() {
     return new BodhiSigner(provider, selectedAddress, curExtension.signer);
   }, [provider, curExtension, selectedAddress]);
 
+  const claimDefaultAccount = useCallback(async () => {
+    if (!signer) return;
+
+    setIsClaiming(true);
+    try {
+      await signer.claimDefaultAccount();
+    } finally {
+      setIsClaiming(false);
+      setIsClaimed(true);
+      const bal = await signer.getBalance();
+      setBalance(formatUnits(bal));
+    }
+  }, [signer, setIsClaiming]);
+
   /* ----------
      Step 2.2: locad some info about the account such as:
      - bound/default evm address
@@ -96,15 +112,15 @@ function App() {
 
       setLoadingAccountInfo(true);
       try {
-        const [evmAddress, accountBalance] = await Promise.all([
+        const [evmAddr, accountBalance] = await Promise.all([
           signer.queryEvmAddress(),
           signer.getBalance(),
         ]);
         setBalance(formatUnits(accountBalance));
-        setClaimedEvmAddress(evmAddress);
+        setEvmAddress(evmAddr);
       } catch (error) {
         console.error(error);
-        setClaimedEvmAddress('');
+        setEvmAddress('');
         setBalance('');
       } finally {
         setLoadingAccountInfo(false);
@@ -230,9 +246,13 @@ function App() {
           <div>
             {loadingAccount
               ? 'loading account info ...'
-              : claimedEvmAddress
-                ? (<div>claimed evm address: <span className='address'>{claimedEvmAddress}</span></div>)
-                : (<div>default evm address: <span className='address'>{signer.computeDefaultEvmAddress()}</span></div>)}
+              : (
+                <>
+                  <div>{isClaimed ? 'claimed' : 'default'} evm address: { evmAddress } </div>
+                  {isClaimed && balance[0] && <div>account balance: { balance[0] } </div>}
+                  {!isClaimed && <Button type='primary' disabled={ isClaiming } onClick={ claimDefaultAccount }>{isClaiming ? 'claiming...' : 'claim default evm address'}</Button>}
+                </>
+              )}
             { balance && (<div>account balance: <span className='address'>{ balance }</span></div>) }
           </div>
         )}
