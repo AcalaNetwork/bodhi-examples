@@ -112,12 +112,14 @@ function App() {
 
       setLoadingAccountInfo(true);
       try {
-        const [evmAddr, accountBalance] = await Promise.all([
-          signer.queryEvmAddress(),
+        const [evmAddr, accountBalance, claimed] = await Promise.all([
+          signer.getAddress(),
           signer.getBalance(),
+          signer.isClaimed(),
         ]);
         setBalance(formatUnits(accountBalance));
         setEvmAddress(evmAddr);
+        setIsClaimed(claimed);
       } catch (error) {
         console.error(error);
         setEvmAddress('');
@@ -248,12 +250,11 @@ function App() {
               ? 'loading account info ...'
               : (
                 <>
-                  <div>{isClaimed ? 'claimed' : 'default'} evm address: { evmAddress } </div>
-                  {isClaimed && balance[0] && <div>account balance: { balance[0] } </div>}
+                  <div>{isClaimed ? 'claimed' : 'default'} evm address: {evmAddress} </div>
+                  {isClaimed && balance && <div>account balance: { balance } </div>}
                   {!isClaimed && <Button type='primary' disabled={ isClaiming } onClick={ claimDefaultAccount }>{isClaiming ? 'claiming...' : 'claim default evm address'}</Button>}
                 </>
               )}
-            { balance && (<div>account balance: <span className='address'>{ balance }</span></div>) }
           </div>
         )}
       </section>
