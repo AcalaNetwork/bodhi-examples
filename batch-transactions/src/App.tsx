@@ -1,5 +1,4 @@
 import React, {
-  ReactNode,
   useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState,
 } from 'react';
 import { WsProvider, SubmittableResult } from '@polkadot/api';
@@ -8,8 +7,8 @@ import type {
   InjectedExtension,
   InjectedAccount,
 } from '@polkadot/extension-inject/types';
-import { Provider, Signer } from '@acala-network/bodhi';
-import { handleTxResponse } from '@acala-network/eth-providers';
+import { BodhiSigner } from '@acala-network/bodhi';
+import { BodhiProvider, handleTxResponse } from '@acala-network/eth-providers';
 import { getContractAddress } from '@ethersproject/address';
 import { MaxUint256 } from '@ethersproject/constants';
 import { formatUnits } from 'ethers/lib/utils';
@@ -38,7 +37,7 @@ const App = () => {
   const [extensionList, setExtensionList] = useState<InjectedExtension[]>([]);
   const [curExtension, setCurExtension] = useState<InjectedExtension | undefined>(undefined);
   const [accountList, setAccountList] = useState<InjectedAccount[]>([]);
-  const [provider, setProvider] = useState<Provider | null>(null);
+  const [provider, setProvider] = useState<BodhiProvider | null>(null);
 
   /* ---------- status flags ---------- */
   const [connecting, setConnecting] = useState(false);
@@ -63,7 +62,7 @@ const App = () => {
   const [input0, setInput0] = useState<string>('123456');
   const [input1, setInput1] = useState<string>('888888');
   const [liquidity, setLiquidity] = useState<string>('0');
-  const [url, setUrl] = useState<string>('wss://mandala-rpc.aca-staging.network/ws');
+  const [url, setUrl] = useState<string>('wss://mandala-tc9-rpc.aca-staging.network');
   // const [url, setUrl] = useState<string>('ws://localhost:9944');
 
   // init data
@@ -98,7 +97,7 @@ const App = () => {
     setConnecting(true);
     try {
       // connect provider
-      const signerProvider = new Provider({
+      const signerProvider = new BodhiProvider({
         provider: new WsProvider(url.trim()),
       });
       await signerProvider.isReady();
@@ -128,7 +127,7 @@ const App = () => {
                                                              ---------- */
   const signer = useMemo(() => {
     if (!provider || !curExtension || !selectedAddress) return null;
-    return new Signer(provider, selectedAddress, curExtension.signer);
+    return new BodhiSigner(provider, selectedAddress, curExtension.signer);
   }, [provider, curExtension, selectedAddress]);
 
   /* ----------
@@ -164,16 +163,16 @@ const App = () => {
   const claimDefaultAccount = useCallback(async () => {
     if (!signer) return;
 
-    setIsClaiming(true)
+    setIsClaiming(true);
     try {
-      await signer.claimDefaultAccount()
+      await signer.claimDefaultAccount();
     } finally {
-      setIsClaiming(false)
-      setIsClaimed(true)
-      const balance = await signer.getBalance()
-      setBalance([formatUnits(balance)])
+      setIsClaiming(false);
+      setIsClaimed(true);
+      const balance = await signer.getBalance();
+      setBalance([formatUnits(balance)]);
     }
-  }, [signer, setIsClaiming])
+  }, [signer, setIsClaiming]);
 
   /* ------------ Step 2: batch deploy contracts ------------ */
   const deploy = useCallback(async () => {
@@ -204,12 +203,12 @@ const App = () => {
            - handle result in the callback function
                                          ---------- */
 
-      let handled = false
+      let handled = false;
       await batchDeploy.signAndSend(selectedAddress, (result: SubmittableResult) => {
         if (handled) return;
 
         if (result.status.isInBlock || result.status.isFinalized) {
-          handled = true
+          handled = true;
 
           // this is mainly for some error checking
           handleTxResponse(result, provider.api).catch(err => {
@@ -282,12 +281,12 @@ const App = () => {
            - sign and send the `batchAll` extrinsic
            - handle result in the callback function
                                          ---------- */
-      let handled = false
+      let handled = false;
       await batchCall.signAndSend(selectedAddress, (result: SubmittableResult) => {
         if (handled) return;
 
         if (result.status.isInBlock || result.status.isFinalized) {
-          handled = true
+          handled = true;
 
           // this is mainly for some error checking
           handleTxResponse(result, provider.api).catch(err => {
@@ -337,12 +336,12 @@ const App = () => {
 
       const batchCall = provider.api.tx.utility.batchAll(recycleExtrinsics);
 
-      let handled = false
+      let handled = false;
       await batchCall.signAndSend(selectedAddress, (result: SubmittableResult) => {
         if (handled) return;
 
         if (result.status.isInBlock || result.status.isFinalized) {
-          handled = true
+          handled = true;
 
           // this is mainly for some error checking
           handleTxResponse(result, provider.api).catch(err => {
@@ -418,12 +417,13 @@ const App = () => {
           <div>
             { loadingAccount
               ? 'loading account info ...'
-              : <>
+              : (
+                <>
                   <div>{ isClaimed ? 'claimed' : 'default' } evm address: <DataGray value={ evmAddress } /></div>
                   { isClaimed && balance[0] && <div>account balance: <DataGray value={ balance[0] } /></div> }
-                  { !isClaimed && <Button type='primary' disabled={isClaiming} onClick={ claimDefaultAccount }>{ isClaiming ? <><StarOutlined spin /> claiming...</> : 'claim default evm address' }</Button> }
+                  { !isClaimed && <Button type='primary' disabled={ isClaiming } onClick={ claimDefaultAccount }>{ isClaiming ? <><StarOutlined spin /> claiming...</> : 'claim default evm address' }</Button> }
                 </>
-            }
+              ) }
           </div>
         ) }
       </section>

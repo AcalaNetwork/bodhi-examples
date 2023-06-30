@@ -5,6 +5,9 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   build: {
     target: 'ESNext',
+    rollupOptions: {
+      external: ['chai'],
+    },
   },
   plugins: [react()],
 });

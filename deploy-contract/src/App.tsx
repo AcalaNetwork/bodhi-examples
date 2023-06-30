@@ -1,7 +1,7 @@
 import React, {
   useCallback, useEffect, useMemo, useState,
 } from 'react';
-import { Provider, Signer } from '@acala-network/bodhi';
+import { BodhiProvider, BodhiSigner } from '@acala-network/bodhi';
 import { WsProvider } from '@polkadot/api';
 import { web3Enable } from '@polkadot/extension-dapp';
 import type {
@@ -32,7 +32,7 @@ function App() {
   const [calling, setCalling] = useState(false);
 
   /* ---------- data ---------- */
-  const [provider, setProvider] = useState<Provider | null>(null);
+  const [provider, setProvider] = useState<BodhiProvider | null>(null);
   const [selectedAddress, setSelectedAddress] = useState<string>('');
   const [claimedEvmAddress, setClaimedEvmAddress] = useState<string>('');
   const [balance, setBalance] = useState<string>('');
@@ -40,14 +40,14 @@ function App() {
   const [echoInput, setEchoInput] = useState<string>('calling an EVM+ contract with polkadot wallet!');
   const [echoMsg, setEchoMsg] = useState<string>('');
   const [newEchoMsg, setNewEchoMsg] = useState<string>('');
-  const [url, setUrl] = useState<string>('wss://mandala-rpc.aca-staging.network/ws');
+  const [url, setUrl] = useState<string>('wss://mandala-tc9-rpc.aca-staging.network');
   // const [url, setUrl] = useState<string>('ws://localhost:9944');
 
   /* ------------ Step 1: connect to chain node with a provider ------------ */
   const connectProvider = useCallback(async (nodeUrl: string) => {
     setConnecting(true);
     try {
-      const signerProvider = new Provider({
+      const signerProvider = new BodhiProvider({
         provider: new WsProvider(nodeUrl.trim()),
       });
 
@@ -81,7 +81,7 @@ function App() {
                                                              ---------- */
   const signer = useMemo(() => {
     if (!provider || !curExtension || !selectedAddress) return null;
-    return new Signer(provider, selectedAddress, curExtension.signer);
+    return new BodhiSigner(provider, selectedAddress, curExtension.signer);
   }, [provider, curExtension, selectedAddress]);
 
   /* ----------
