@@ -1,7 +1,7 @@
 import React, {
   useCallback, useEffect, useMemo, useState,
 } from 'react';
-import { Provider, Signer } from '@acala-network/bodhi';
+import { BodhiProvider, BodhiSigner } from '@acala-network/bodhi';
 import { WsProvider } from '@polkadot/api';
 import { web3Enable } from '@polkadot/extension-dapp';
 import type {
@@ -30,24 +30,26 @@ function App() {
   const [loadingAccount, setLoadingAccountInfo] = useState(false);
   const [deploying, setDeploying] = useState(false);
   const [calling, setCalling] = useState(false);
+  const [isClaiming, setIsClaiming] = useState<boolean>(false);
 
   /* ---------- data ---------- */
-  const [provider, setProvider] = useState<Provider | null>(null);
+  const [provider, setProvider] = useState<BodhiProvider | null>(null);
   const [selectedAddress, setSelectedAddress] = useState<string>('');
-  const [claimedEvmAddress, setClaimedEvmAddress] = useState<string>('');
+  const [evmAddress, setEvmAddress] = useState<string>('');
+  const [isClaimed, setIsClaimed] = useState<boolean>(false);
   const [balance, setBalance] = useState<string>('');
   const [deployedAddress, setDeployedAddress] = useState<string>('');
   const [echoInput, setEchoInput] = useState<string>('calling an EVM+ contract with polkadot wallet!');
   const [echoMsg, setEchoMsg] = useState<string>('');
   const [newEchoMsg, setNewEchoMsg] = useState<string>('');
-  const [url, setUrl] = useState<string>('wss://mandala-rpc.aca-staging.network/ws');
+  const [url, setUrl] = useState<string>('wss://mandala-tc9-rpc.aca-staging.network');
   // const [url, setUrl] = useState<string>('ws://localhost:9944');
 
   /* ------------ Step 1: connect to chain node with a provider ------------ */
   const connectProvider = useCallback(async (nodeUrl: string) => {
     setConnecting(true);
     try {
-      const signerProvider = new Provider({
+      const signerProvider = new BodhiProvider({
         provider: new WsProvider(nodeUrl.trim()),
       });
 
@@ -81,8 +83,22 @@ function App() {
                                                              ---------- */
   const signer = useMemo(() => {
     if (!provider || !curExtension || !selectedAddress) return null;
-    return new Signer(provider, selectedAddress, curExtension.signer);
+    return new BodhiSigner(provider, selectedAddress, curExtension.signer);
   }, [provider, curExtension, selectedAddress]);
+
+  const claimDefaultAccount = useCallback(async () => {
+    if (!signer) return;
+
+    setIsClaiming(true);
+    try {
+      await signer.claimDefaultAccount();
+    } finally {
+      setIsClaiming(false);
+      setIsClaimed(true);
+      const bal = await signer.getBalance();
+      setBalance(formatUnits(bal));
+    }
+  }, [signer, setIsClaiming]);
 
   /* ----------
      Step 2.2: locad some info about the account such as:
@@ -96,15 +112,17 @@ function App() {
 
       setLoadingAccountInfo(true);
       try {
-        const [evmAddress, accountBalance] = await Promise.all([
-          signer.queryEvmAddress(),
+        const [evmAddr, accountBalance, claimed] = await Promise.all([
+          signer.getAddress(),
           signer.getBalance(),
+          signer.isClaimed(),
         ]);
         setBalance(formatUnits(accountBalance));
-        setClaimedEvmAddress(evmAddress);
+        setEvmAddress(evmAddr);
+        setIsClaimed(claimed);
       } catch (error) {
         console.error(error);
-        setClaimedEvmAddress('');
+        setEvmAddress('');
         setBalance('');
       } finally {
         setLoadingAccountInfo(false);
@@ -230,10 +248,13 @@ function App() {
           <div>
             {loadingAccount
               ? 'loading account info ...'
-              : claimedEvmAddress
-                ? (<div>claimed evm address: <span className='address'>{claimedEvmAddress}</span></div>)
-                : (<div>default evm address: <span className='address'>{signer.computeDefaultEvmAddress()}</span></div>)}
-            { balance && (<div>account balance: <span className='address'>{ balance }</span></div>) }
+              : (
+                <>
+                  <div>{isClaimed ? 'claimed' : 'default'} evm address: {evmAddress} </div>
+                  {isClaimed && balance && <div>account balance: { balance } </div>}
+                  {!isClaimed && <Button type='primary' disabled={ isClaiming } onClick={ claimDefaultAccount }>{isClaiming ? 'claiming...' : 'claim default evm address'}</Button>}
+                </>
+              )}
           </div>
         )}
       </section>
